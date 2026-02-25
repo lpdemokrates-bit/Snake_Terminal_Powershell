@@ -39,7 +39,7 @@ class GameBoard{
         Start-Sleep 1
     }
 
-    [void] update($body){
+    [void] update($body, $food){
         $this.clear()
         for($i = 0; $i -lt $body.Count; $i++){
             if($i -eq ($body.Count -1)){
@@ -50,7 +50,7 @@ class GameBoard{
             
             }
 
-            # FOOD
+            $this.grid[$food[0]][$food[1]] = "€"
         
         }
     }
@@ -86,8 +86,8 @@ class Snake{
     [void]mov([int]$size){
         $this.input_trans()
         $new_head_pos = @(0,0)
-        $new_head_pos[0] = (($this.snake_body[-1][0] + $this.direction[0]) % $size)
-        $new_head_pos[1] = (($this.snake_body[-1][1] + $this.direction[1]) % $size)
+        $new_head_pos[0] = (($this.snake_body[-1][0] + $this.direction[0]) % $size -1)
+        $new_head_pos[1] = (($this.snake_body[-1][1] + $this.direction[1]) % $size -1 )
         if ($this.mov_pending){
             $this.snake_body.RemoveAt(0)
             }
@@ -111,19 +111,35 @@ class Snake{
      }
      
      [void]input_trans(){
-        $press = Read-Host 
+        
+        $press = Read-Host
         switch ($press){
             "w" {$this.direction = (0,-1)}
             "s" {$this.direction = (0,1)}
             "d" {$this.direction = (1,0)}
             "a" {$this.direction = (-1,0)}
-                       
+                       }
         }
         }
-        }
+        
      
      
+class Food{
+       $pos
+       
+       Food(){
+       $this.pos = @(0,0)
+       } 
+       
+       [void]pos_on_board($size,$body){
+            $this.pos = @(Get-Random [-Maximum] $size, Get-Random [-Maximum] $size)
+            while($body -contains $this.pos){
+            $this.pos = @(Get-Random [-Maximum] $size, Get-Random [-Maximum] $size)
+            
+            }
+       }
 
+}
 
 
 
@@ -134,10 +150,8 @@ class GameEngine{
        [Snake] $snake
        [int] $size
        [boolean] $gamestate
-       # Food
-       #?init Routine?
-       # THREADING
-
+       [Food]$food
+   
        GameEngine([int] $size){
             $this.board = [Gameboard]::new($size)
             $x = [int] $size / 2
@@ -145,6 +159,7 @@ class GameEngine{
             $this.snake = [Snake]::new($x,$y)
             $this.size = $size
             $this.gamestate = $true
+            $this.food = [Food]::new()
             
         
                
@@ -153,9 +168,25 @@ class GameEngine{
 
        [void]update_frames(){
             $this.snake.mov($this.size)
-            ## Check hit
-            $this.board.update($this.snake.snake_body)
+            $this.check_hit()
+            $this.board.update($this.snake.snake_body,$this.food.pos)
             $this.board.display()
+       }
+
+       [void]check_hit(){
+            Write-Host $this.snake.get_head()
+            Write-Host $this.food.pos
+            $this.snake.get_head() -eq $this.food.pos|Out-Host
+            if($this.snake.get_head() -eq $this.food.pos){
+                $this.snake.eat()
+                $this.food.pos_on_board($this.size,$this.snake.snake_body)
+            }
+        
+       #for($i = 0; $i -lt $this.snake.snake_body.Length - 1; $i++){
+        #    if($this.snake.snake_body[$i] -eq $this.snake.get_head()){
+         #       $this.gamestate = $false
+         #   }
+      # }
        }
 
        [void]run(){
@@ -171,3 +202,5 @@ class GameEngine{
 $game = [GameEngine]::new(10)
 
 $game.run()
+
+
