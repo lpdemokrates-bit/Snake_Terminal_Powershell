@@ -1,7 +1,4 @@
-﻿
-
-
-class GameBoard{
+﻿class GameBoard{
     [int] $size
     $grid
     
@@ -50,7 +47,7 @@ class GameBoard{
             
             }
 
-            $this.grid[$food[0]][$food[1]] = "€"
+            $this.grid[$food[1]][$food[0]] = "€"
         
         }
     }
@@ -76,6 +73,8 @@ class Snake{
         $this.mov_pending = $true
         $this.score = 0
         $this.key = New-Object System.Collections.Queue
+        
+
 
     }
 
@@ -86,13 +85,15 @@ class Snake{
     [void]mov([int]$size){
         $this.input_trans()
         $new_head_pos = @(0,0)
-        $new_head_pos[0] = (($this.snake_body[-1][0] + $this.direction[0]) % $size -1)
-        $new_head_pos[1] = (($this.snake_body[-1][1] + $this.direction[1]) % $size -1 )
+        $new_head_pos[0] = (($this.snake_body[-1][0] + $size + $this.direction[0]) % $size )
+        $new_head_pos[1] = (($this.snake_body[-1][1] + $size + $this.direction[1]) % $size )
         if ($this.mov_pending){
             $this.snake_body.RemoveAt(0)
             }
         $this.snake_body.Add($new_head_pos)
         $this.mov_pending = $true
+
+        
 
     }
 
@@ -106,13 +107,15 @@ class Snake{
 
         if([Console]::KeyAvailable){
          $this.key.Enqueue( [System.Console]::ReadKey($true).Key.ToString())
+         $this.input_trans()
     }
             }
      }
      
      [void]input_trans(){
-        
+       
         $press = Read-Host
+        #$press = $this.key.Dequeue()
         switch ($press){
             "w" {$this.direction = (0,-1)}
             "s" {$this.direction = (0,1)}
@@ -125,18 +128,22 @@ class Snake{
      
      
 class Food{
-       $pos
+       [array]$pos
        
        Food(){
        $this.pos = @(0,0)
        } 
        
        [void]pos_on_board($size,$body){
-            $this.pos = @(Get-Random [-Maximum] $size, Get-Random [-Maximum] $size)
+            $this.pos = @($this.rand_number($size),$this.rand_number($size))
             while($body -contains $this.pos){
-            $this.pos = @(Get-Random [-Maximum] $size, Get-Random [-Maximum] $size)
+            $this.pos = @($this.rand_number($size),$this.rand_number($size))
             
             }
+       }
+       [int]rand_number($size){
+       $rand = Get-Random -Minimum 0 -Maximum $size
+       return $rand
        }
 
 }
@@ -174,21 +181,11 @@ class GameEngine{
        }
 
        [void]check_hit(){
-            Write-Host $this.snake.get_head()
-            Write-Host $this.food.pos
-            $this.snake.get_head() -eq $this.food.pos|Out-Host
-            if($this.snake.get_head() -eq $this.food.pos){
+            if($this.snake.get_head()[0] -eq $this.food.pos[0] -and $this.snake.get_head()[1] -eq $this.food.pos[1]){
                 $this.snake.eat()
                 $this.food.pos_on_board($this.size,$this.snake.snake_body)
             }
-        
-       #for($i = 0; $i -lt $this.snake.snake_body.Length - 1; $i++){
-        #    if($this.snake.snake_body[$i] -eq $this.snake.get_head()){
-         #       $this.gamestate = $false
-         #   }
-      # }
-       }
-
+        }
        [void]run(){
             while ($this.gamestate){
                 $this.update_frames()
